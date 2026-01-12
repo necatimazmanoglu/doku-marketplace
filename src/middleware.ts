@@ -1,6 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-// Ana sayfayı ve gerekli rotaları herkese açık yap
+// Herkese açık rotalar
 const isPublicRoute = createRouteMatcher([
   '/', 
   '/products(.*)', 
@@ -17,7 +17,9 @@ export default clerkMiddleware(async (auth, request) => {
 
 export const config = {
   matcher: [
+    // Next.js statik dosyaları hariç her şeyi yakala
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // API rotalarını her zaman yakala
     '/(api|trpc)(.*)',
   ],
 }
