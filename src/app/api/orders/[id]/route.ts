@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth(); // auth() artık await istiyor olabilir, garanti olsun.
+    const { userId } = await auth();
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -28,7 +28,7 @@ export async function GET(
       return new NextResponse("Order not found", { status: 404 });
     }
 
-    // Sadece siparişi veren kişi veya satıcı görebilsin (Basit güvenlik)
+    // Güvenlik kontrolü: Sadece alıcı veya satıcı görebilir
     if (order.buyerId !== userId && order.product.sellerId !== userId) {
        return new NextResponse("Forbidden", { status: 403 });
     }

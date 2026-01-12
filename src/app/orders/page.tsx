@@ -1,13 +1,13 @@
 import { auth } from '@clerk/nextjs/server'; // DÜZELTİLDİ: /server eklendi
 import { prisma } from '@/lib/prisma';
-import { notFound, redirect } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
 export default async function OrdersPage() {
   const { userId } = await auth();
 
   if (!userId) {
-    redirect("/"); // Giriş yapmamışsa ana sayfaya at
+    redirect("/");
   }
 
   const orders = await prisma.order.findMany({
@@ -46,7 +46,6 @@ export default async function OrdersPage() {
                 
                 <div className="flex items-center gap-4">
                   <span className="font-bold text-gray-900">₺{order.amount}</span>
-                  {/* İndirme Linki */}
                   <a 
                     href={order.product.pdfUrl} 
                     target="_blank" 
