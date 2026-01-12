@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'; // DÜZELTİLDİ: /server eklendi
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
@@ -45,7 +45,9 @@ export default async function OrdersPage() {
                 </div>
                 
                 <div className="flex items-center gap-4">
-                  <span className="font-bold text-gray-900">₺{order.amount}</span>
+                  {/* DÜZELTME: order.amount yerine order.product.price kullanıyoruz */}
+                  <span className="font-bold text-gray-900">₺{order.product.price}</span>
+                  
                   <a 
                     href={order.product.pdfUrl} 
                     target="_blank" 
