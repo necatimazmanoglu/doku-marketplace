@@ -1,3 +1,6 @@
+// BU SATIR KRİTİK: Sayfanın her istekte yeniden oluşturulmasını sağlar ve 404 hatasını önler.
+export const dynamic = "force-dynamic";
+
 import { prisma } from "@/lib/prisma";
 import ProductCard from "@/components/ProductCard";
 import Link from "next/link";
@@ -36,7 +39,6 @@ export default async function Home() {
               Ürünleri Keşfet
             </Link>
             
-            {/* LİNK GÜNCELLENDİ: Artık /products/new adresine gidiyor */}
             <Link href="/products/new" className="px-8 py-4 bg-white text-gray-700 border border-gray-300 rounded-xl font-semibold hover:bg-gray-50 transition">
               Hemen Ürün Ekle
             </Link>
