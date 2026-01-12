@@ -1,31 +1,33 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prismaClient';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const userId = searchParams.get('userId');
+export async function GET() {
+  try {
+    const { userId } = await auth();
 
-  if (!userId) return NextResponse.json([], { status: 400 });
-
-  const purchases = await prisma.purchase.findMany({
-    where: { userId },
-    include: {
-      product: true
-    },
-    orderBy: {
-      createdAt: 'desc'
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 });
     }
-  });
 
-  const result = purchases.map((purchase) => ({
-    id: purchase.product.id,
-    title: purchase.product.title,
-    description: purchase.product.description,
-    price: purchase.product.price,
-    author: purchase.product.author,
-    category: purchase.product.category,
-    purchaseDate: purchase.createdAt
-  }));
+    // DÜZELTME: 'purchase' yerine 'order' tablosunu kullanıyoruz.
+    // Ayrıca şemamızda alıcı 'buyerId' olarak geçiyor.
+    const purchases = await prisma.order.findMany({
+      where: {
+        buyerId: userId,
+      },
+      include: {
+        product: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      }
+    });
 
-  return NextResponse.json(result);
+    return NextResponse.json(purchases);
+
+  } catch (error) {
+    console.log("[LIBRARY_GET]", error);
+    return new NextResponse("Internal Error", { status: 500 });
+  }
 }
