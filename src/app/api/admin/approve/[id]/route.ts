@@ -1,21 +1,34 @@
-// ✅ Ürünü onaylama API endpointi
-
-import { prisma } from '@/lib/prismaClient';
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  // DÜZELTME: params artık 'Promise' tipinde olmalı
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const updated = await prisma.product.update({
-      where: { id: params.id },
-      data: { isApproved: true },
+    const { userId } = await auth();
+
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    // DÜZELTME: params'ı await ile bekliyoruz
+    const { id } = await params;
+
+    const product = await prisma.product.update({
+      where: {
+        id: id,
+      },
+      data: {
+        isApproved: true,
+      },
     });
 
-    return NextResponse.json(updated);
+    return NextResponse.json(product);
   } catch (error) {
-    console.error('[APPROVE_ERROR]', error);
-    return NextResponse.json({ error: 'Onay hatası' }, { status: 500 });
+    console.log("[PRODUCT_APPROVE]", error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }
