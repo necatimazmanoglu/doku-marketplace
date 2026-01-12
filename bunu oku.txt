@@ -1,0 +1,105 @@
+1) En iyi prompt: “Ürün şartnamesi + kod üretimi” (MVP)
+
+Bunu bir AI coding aracı/ChatGPT’ye aynen yapıştır:
+
+Rolün: Kıdemli full-stack yazılım mimarı + ürün yöneticisi + güvenlik odaklı geliştirici.
+
+Hedef: Gumroad benzeri ama MVP seviyesinde, sadece PDF satışı yapan bir pazar yeri web uygulaması tasarla ve üret.
+Kapsam: MVP (minimum). Gereksiz özellik ekleme. “Şimdilik” sadece PDF. Mobil uyumlu.
+
+Teknoloji tercihi:
+- Next.js (App Router) + TypeScript
+- PostgreSQL + Prisma
+- Auth: NextAuth (email login veya magic link) ya da Clerk (hangisi daha hızlıysa)
+- Storage: S3 uyumlu (AWS S3 / Cloudflare R2 / MinIO). PDF dosyaları burada tutulacak.
+- Deployment: Vercel + managed Postgres (Supabase/Neon vb.)
+- Ödeme: iyzico entegrasyonu hedef; ancak MVP’de önce “mock ödeme” ile tüm akış çalışsın, sonra iyzico modülü eklenebilir.
+- UI: Tailwind + shadcn/ui
+
+İş modeli: Marketplace. Satıcı ürün ekler, alıcı satın alır. Komisyon oranı sabit (ör: %10) ve admin panelden değişebilir.
+
+Kullanıcı rolleri:
+1) Admin (ben)
+2) Satıcı (üretici)
+3) Alıcı
+
+MVP Özellikler (MUTLAK):
+- Üyelik: alıcı ve satıcı kayıt + giriş
+- Satıcı paneli:
+  - Profil (ad, açıklama)
+  - Ürün ekleme: başlık, açıklama, fiyat (TRY), kategori/etiket (basit), PDF yükleme
+  - Ürün listeleme/düzenleme/pasife alma
+  - Sipariş listesi (kim satın aldı, tarih, tutar, durum)
+- Alıcı:
+  - Ürün listeleme sayfası + arama (basit)
+  - Ürün detay sayfası
+  - Satın alma akışı (önce mock, sonra iyzico)
+  - Satın alınanlar sayfası (kütüphane)
+  - PDF indirme (güvenli, imzalı URL, süreli link)
+- Admin:
+  - Kullanıcıları görme/banlama
+  - Ürünleri görme/kaldırma
+  - Komisyon oranı ayarı
+  - Basit dashboard (toplam satış, komisyon, aktif satıcı sayısı)
+
+MVP Dışı (KESİNLİKLE YAPMA):
+- Abonelik
+- Yorum/puan
+- Kupon
+- Affiliate
+- Çoklu dosya türü
+- Mobil uygulama
+- Çok dilli destek
+
+Güvenlik & kurallar:
+- PDF erişimi sadece satın alan kullanıcıya. Direkt link sızıntısını azalt.
+- Rate limiting + temel bot koruması.
+- Dosya yüklemede boyut limiti (örn 50MB) ve sadece PDF MIME.
+- GDPR/KVKK için minimum: privacy policy + terms sayfaları için placeholder sayfalar.
+- Loglama: satın alma ve indirme event’leri.
+
+Teslim çıktıları:
+1) Net kullanıcı akışları (user stories)
+2) Veritabanı şeması (Prisma modelleri)
+3) API route planı
+4) Ekranlar listesi (route’lar)
+5) Sonra çalışır demo: repo yapısı + temel sayfalar + auth + ürün CRUD + mock checkout + satın alma kaydı + indirme.
+6) Ardından “iyzico entegrasyon planı” ve gerekli env değişkenleri.
+
+Önemli: Bütçe ve zaman kısıtlı. En hızlı ayağa kalkacak şekilde karar ver, fakat “güvenli indirme” olmazsa olmaz.
+İlk cevapta sadece mimari ve planı çıkar; ikinci adımda kod üretmeye başla.
+
+
+Bu promptun gücü: AI’ya “kapsam dışı” çizgilerini çekiyor. Senin en büyük düşmanın scope creep.
+
+2) Daha kısa prompt (sadece plan + ekranlar)
+
+Eğer önce “ne çıkacak” görmek istersen:
+
+Gumroad benzeri bir MVP marketplace istiyorum: sadece PDF satışı.
+Alıcı ve satıcı üyelik açacak. Satıcı ürün ekleyecek (PDF yükle + fiyat). Alıcı satın alacak, sonra kütüphaneden güvenli linkle indirecek.
+Admin panel: kullanıcı/ürün yönetimi + komisyon oranı ayarı.
+Teknoloji: Next.js + TS + Postgres + Prisma + NextAuth + S3 storage. Ödeme: önce mock, sonra iyzico.
+Lütfen: kullanıcı akışları, sayfalar/routes, DB şeması, API endpoint listesi, güvenlik önlemleri ve MVP dışı özellikler listesi üret.
+
+3) “UI/UX tasarla” promptu (tasarım odaklı)
+
+Koddan önce wireframe istiyorsan:
+
+MVP PDF satış marketplace için (Gumroad benzeri) sade ve hızlı bir UX tasarla.
+Roller: satıcı, alıcı, admin.
+Ekranları listele ve her ekran için: amaç, ana bileşenler, CTA, boş durumlar, hata durumları yaz.
+Mobil öncelikli düşün. Minimal, güven veren tasarım dili. 
+MVP dışı özellik ekleme.
+
+Sana ekstra: “İşin batıran 5 prompt hatası”
+
+“Gumroad gibi yap” deyip MVP sınırı çizmemek
+
+“Ödeme ekle” deyip mock ödeme ile başlatmamak
+
+“Dosya indirme” deyip yetkilendirme + süreli link istememek
+
+“Admin panel” demeyip sonra operasyonu elinle yapmak
+
+“KVKK/mesafeli satış”ı tamamen yok saymak (sonra başın ağrır)

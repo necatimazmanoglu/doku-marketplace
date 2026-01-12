@@ -1,0 +1,174 @@
+// src/lib/mock-data.ts
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: 'ADMIN' | 'SELLER' | 'BUYER';
+  isBanned: boolean;
+}
+
+export interface Product {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  tags: string[];
+  category: string;
+  pdfUrl: string;
+  fileName: string;
+  fileSize: number;
+  isActive: boolean;
+  isApproved: boolean;
+  views: number;
+  sellerId: string;
+  createdAt: string;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  productId: string;
+  pricePaid: number;
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  buyerId: string;
+  sellerId: string;
+  downloadToken?: string;
+  downloadExpiry?: string;
+  createdAt: string;
+}
+
+// Mock veriler
+export const mockUsers: User[] = [
+  {
+    id: 'user_1',
+    email: 'admin@example.com',
+    name: 'Admin User',
+    role: 'ADMIN',
+    isBanned: false,
+  },
+  {
+    id: 'user_2',
+    email: 'seller@example.com',
+    name: 'Ahmet Yılmaz',
+    role: 'SELLER',
+    isBanned: false,
+  },
+  {
+    id: 'user_3',
+    email: 'buyer@example.com',
+    name: 'Mehmet Demir',
+    role: 'BUYER',
+    isBanned: false,
+  },
+];
+
+export const mockProducts: Product[] = [
+  {
+    id: 'prod_1',
+    title: 'React.js Eğitim Kitabı 2024',
+    description: 'Kapsamlı React.js eğitim kitabı: 150 sayfa, örnek projeler, modern teknikler ve en yeni best practices ile.',
+    price: 49.99,
+    tags: ['React', 'JavaScript', 'Frontend', 'Web Development'],
+    category: 'Teknoloji',
+    pdfUrl: '/pdfs/react-book.pdf',
+    fileName: 'react-egitim-kitabi.pdf',
+    fileSize: 5242880, // 5MB
+    isActive: true,
+    isApproved: true,
+    views: 245,
+    sellerId: 'user_2',
+    createdAt: '2024-01-15T10:30:00Z',
+  },
+  {
+    id: 'prod_2',
+    title: 'Next.js 14 ile Modern Web Uygulamaları',
+    description: 'Next.js 14, App Router, Server Components ve yeni özelliklerle modern web uygulamaları geliştirme rehberi.',
+    price: 59.99,
+    tags: ['Next.js', 'TypeScript', 'Fullstack', 'React'],
+    category: 'Teknoloji',
+    pdfUrl: '/pdfs/nextjs-book.pdf',
+    fileName: 'nextjs-14-rehberi.pdf',
+    fileSize: 7340032, // 7MB
+    isActive: true,
+    isApproved: true,
+    views: 189,
+    sellerId: 'user_2',
+    createdAt: '2024-01-20T14:45:00Z',
+  },
+  {
+    id: 'prod_3',
+    title: 'Tailwind CSS Tasarım Sistemi',
+    description: 'Tailwind CSS ile hızlı ve responsive tasarımlar oluşturma. Utility-first CSS framework detaylı anlatım.',
+    price: 39.99,
+    tags: ['Tailwind', 'CSS', 'Design', 'Frontend'],
+    category: 'Teknoloji',
+    pdfUrl: '/pdfs/tailwind-book.pdf',
+    fileName: 'tailwind-css-rehberi.pdf',
+    fileSize: 4194304, // 4MB
+    isActive: true,
+    isApproved: true,
+    views: 156,
+    sellerId: 'user_2',
+    createdAt: '2024-01-25T09:15:00Z',
+  },
+];
+
+export const mockOrders: Order[] = [
+  {
+    id: 'order_1',
+    orderNumber: 'ORD-2024-001',
+    productId: 'prod_1',
+    pricePaid: 49.99,
+    status: 'COMPLETED',
+    buyerId: 'user_3',
+    sellerId: 'user_2',
+    downloadToken: 'token_abc123',
+    downloadExpiry: '2024-12-31T23:59:59Z',
+    createdAt: '2024-01-16T11:20:00Z',
+  },
+];
+
+// Mock veritabanı fonksiyonları
+export const db = {
+  // Kullanıcı işlemleri
+  users: {
+    findMany: () => mockUsers,
+    findUnique: (id: string) => mockUsers.find(user => user.id === id),
+    findByEmail: (email: string) => mockUsers.find(user => user.email === email),
+  },
+  
+  // Ürün işlemleri
+  products: {
+    findMany: () => mockProducts.filter(p => p.isActive && p.isApproved),
+    findUnique: (id: string) => mockProducts.find(product => product.id === id),
+    findBySeller: (sellerId: string) => mockProducts.filter(p => p.sellerId === sellerId),
+    create: (data: Omit<Product, 'id' | 'createdAt'>) => {
+      const newProduct: Product = {
+        ...data,
+        id: `prod_${mockProducts.length + 1}`,
+        createdAt: new Date().toISOString(),
+      };
+      mockProducts.push(newProduct);
+      return newProduct;
+    },
+  },
+  
+  // Sipariş işlemleri
+  orders: {
+    findMany: () => mockOrders,
+    findUnique: (id: string) => mockOrders.find(order => order.id === id),
+    findByBuyer: (buyerId: string) => mockOrders.filter(order => order.buyerId === buyerId),
+    findBySeller: (sellerId: string) => mockOrders.filter(order => order.sellerId === sellerId),
+    create: (data: Omit<Order, 'id' | 'createdAt'>) => {
+      const newOrder: Order = {
+        ...data,
+        id: `order_${mockOrders.length + 1}`,
+        orderNumber: `ORD-${new Date().getFullYear()}-${mockOrders.length + 1}`,
+        createdAt: new Date().toISOString(),
+      };
+      mockOrders.push(newOrder);
+      return newOrder;
+    },
+  },
+};
