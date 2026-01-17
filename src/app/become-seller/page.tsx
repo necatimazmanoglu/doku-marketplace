@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+// LİNK İÇİN BU SATIRI EKLEDİK
+import Link from "next/link"; 
 
 export default function BecomeSellerPage() {
   const router = useRouter();
@@ -24,23 +26,22 @@ export default function BecomeSellerPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/seller/create", {
+      const res = await fetch("/api/become-seller", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        alert("Tebrikler! Satıcı hesabınız oluşturuldu. Ürün eklemeye yönlendiriliyorsunuz.");
-        // Başarılı olunca direkt ürün eklemeye git
-        router.push("/dashboard/products/new"); 
+        router.push("/products/new"); 
         router.refresh();
       } else {
-        const err = await res.json();
-        alert(err.error);
+        alert(data.error || "Bir hata oluştu.");
       }
     } catch (error) {
-      alert("Bir hata oluştu.");
+      alert("Sunucu hatası.");
     } finally {
       setLoading(false);
     }
@@ -59,8 +60,9 @@ export default function BecomeSellerPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           
+          {/* Diğer inputlar (Mağaza Adı, IBAN vs.) aynı kalacak... */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mağaza Adı / Görünen İsim *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mağaza Adı *</label>
             <input 
               required
               type="text" 
@@ -72,7 +74,7 @@ export default function BecomeSellerPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">IBAN (Ödeme Almak İçin) *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">IBAN *</label>
             <input 
               required
               type="text" 
@@ -84,41 +86,48 @@ export default function BecomeSellerPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Vergi Numarası (Varsa)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Vergi No (Opsiyonel)</label>
             <input 
               type="text" 
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-              placeholder="1234567890"
               value={formData.taxId}
               onChange={(e) => setFormData({...formData, taxId: e.target.value})}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fatura Adresi *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Adres *</label>
             <textarea 
               required
               rows={3}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-              placeholder="Tam adresiniz..."
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+              placeholder="Fatura adresi..."
               value={formData.address}
               onChange={(e) => setFormData({...formData, address: e.target.value})}
             />
           </div>
 
-          {/* Sözleşme Onayı */}
+          {/* --- GÜNCELLENEN KISIM BURASI --- */}
           <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <input 
               id="terms"
               type="checkbox"
-              className="mt-1 w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+              className="mt-1 w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
               checked={formData.isTermsAccepted}
               onChange={(e) => setFormData({...formData, isTermsAccepted: e.target.checked})}
             />
             <label htmlFor="terms" className="text-sm text-gray-600 cursor-pointer select-none">
-              <span className="font-semibold text-indigo-600">Satıcı Satış Sözleşmesi</span>'ni ve <span className="font-semibold text-indigo-600">KVKK Aydınlatma Metni</span>'ni okudum, onaylıyorum. Bu hesaptan yapılan satışların vergi sorumluluğunun bana ait olduğunu kabul ediyorum.
+              <Link 
+                href="/legal/seller-terms" 
+                target="_blank" 
+                className="font-bold text-black underline hover:text-indigo-600 transition-colors"
+              >
+                Satıcı Satış Sözleşmesi
+              </Link>
+              'ni okudum, onaylıyorum.
             </label>
           </div>
+          {/* -------------------------------- */}
 
           <button
             type="submit"

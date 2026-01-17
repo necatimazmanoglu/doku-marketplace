@@ -1,121 +1,203 @@
-'use client';
+import { prisma } from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import Image from "next/image";
+import { revalidatePath } from "next/cache";
+import { CheckCircle, XCircle, FileText, User, ExternalLink } from "lucide-react";
 
-import { useEffect, useState } from 'react';
-import axios from 'axios';
-import Link from 'next/link';
+export default async function AdminProductsPage() {
+  const { userId } = await auth();
 
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  isApproved: boolean;
-  createdAt: string;
-}
+  // GÜVENLİK: Sadece belirli bir kullanıcı girebilsin (Kendi ID'nizi buraya yazın)
+  // Şimdilik açık bırakıyorum ama canlıya alırken burayı açmalısın:
+  // if (userId !== "user_2rh...") redirect("/");
 
-export default function ProductListPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  if (!userId) redirect("/");
 
-  const fetchProducts = async () => {
+  // --- DÜZELTME BURADA ---
+  // Sadece "isActive: true" olan ürünleri çekiyoruz.
+  // Böylece satıcının sildiği (arşivlediği) ürünler admin onayına düşmez.
+  const products = await prisma.product.findMany({
+    where: {
+      isActive: true, // <--- BU SATIR EKLENDİ
+    },
+    orderBy: [
+      { isApproved: "asc" }, // Önce false (onaysız), sonra true (onaylı)
+      { createdAt: "desc" }
+    ],
+    include: {
+      seller: true, // Satıcı bilgisini de al
+    },
+  });
+
+  // --- SERVER ACTIONS (Sunucu tarafı işlemler) ---
+  
+  // 1. Ürünü Onayla
+  async function approveProduct(formData: FormData) {
+    "use server";
+    const productId = formData.get("productId") as string;
+    
+    await prisma.product.update({
+      where: { id: productId },
+      data: { isApproved: true },
+    });
+
+    revalidatePath("/admin/products");
+    revalidatePath("/explore"); // Vitrini de yenile
+  }
+
+  // 2. Ürünü Reddet (Sil)
+  async function rejectProduct(formData: FormData) {
+    "use server";
+    const productId = formData.get("productId") as string;
+    
+    // Admin reddettiğinde de eğer sipariş varsa hata vermemesi için
+    // burada da "hard delete" yerine "soft delete" (arşivleme) yapılabilir.
+    // Ancak şimdilik veritabanından siliyoruz.
     try {
-      const res = await axios.get('/api/products');
-      setProducts(res.data);
+        await prisma.product.delete({
+            where: { id: productId },
+        });
     } catch (error) {
-      console.error('Ürünler alınırken hata:', error);
-    } finally {
-      setLoading(false);
+        // Eğer silinemezse (sipariş varsa) pasife alalım
+        await prisma.product.update({
+            where: { id: productId },
+            data: { isActive: false, isApproved: false, title: "REDDEDİLDİ (SİLİNDİ)" }
+        });
     }
-  };
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const handleApprove = async (id: string) => {
-    try {
-      const res = await axios.put(`/api/admin/product/${id}/approve`);
-      console.log('Onaylandı:', res.data);
-      fetchProducts();
-    } catch (error) {
-      console.error('Onay hatası:', error);
-      alert('Onaylama başarısız.');
-    }
-  };
-
-  const handleReject = async (id: string) => {
-    const confirmDelete = confirm('Bu ürünü silmek istediğinize emin misiniz?');
-    if (!confirmDelete) return;
-
-    try {
-      const res = await axios.delete(`/api/admin/product/${id}/reject`);
-      console.log('Silindi:', res.data);
-      fetchProducts();
-    } catch (error) {
-      console.error('Silme hatası:', error);
-      alert('Silme başarısız.');
-    }
-  };
-
-  if (loading) return <p>Yükleniyor...</p>;
+    revalidatePath("/admin/products");
+  }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Tüm Ürünler</h1>
+    <div className="min-h-screen bg-gray-50 p-8 font-sans">
+      <div className="max-w-7xl mx-auto">
+        
+        {/* Başlık */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Yönetim Paneli</h1>
+            <p className="text-gray-500">Onay bekleyen ve yayındaki tüm içerikleri yönetin.</p>
+          </div>
+          <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 text-sm font-bold shadow-sm">
+              Toplam: {products.length} Ürün
+          </div>
+        </div>
 
-      {products.length === 0 ? (
-        <p>Henüz ürün eklenmemiş.</p>
-      ) : (
-        <table className="w-full border">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border px-4 py-2 text-left">Başlık</th>
-              <th className="border px-4 py-2 text-left">Fiyat</th>
-              <th className="border px-4 py-2 text-left">Durum</th>
-              <th className="border px-4 py-2 text-left">Tarih</th>
-              <th className="border px-4 py-2 text-center">İşlem</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((product) => (
-              <tr key={product.id} className="border-t">
-                <td className="px-4 py-2">{product.title}</td>
-                <td className="px-4 py-2">{product.price}₺</td>
-                <td className="px-4 py-2">
-                  {product.isApproved ? '✅ Onaylandı' : '⏳ Bekliyor'}
-                </td>
-                <td className="px-4 py-2">
-                  {new Date(product.createdAt).toLocaleDateString('tr-TR')}
-                </td>
-                <td className="px-4 py-2 flex flex-col gap-2 text-center">
-                  <Link
-                    href={`/dashboard/products/${product.id}`}
-                    className="text-blue-600 hover:underline"
+        {/* Ürün Listesi */}
+        <div className="space-y-4">
+          {products.map((product) => (
+            <div 
+              key={product.id} 
+              className={`bg-white rounded-xl p-5 border shadow-sm transition-all hover:shadow-md flex flex-col md:flex-row gap-6 items-start md:items-center ${
+                !product.isApproved ? "border-l-4 border-l-yellow-400" : "border-gray-200"
+              }`}
+            >
+              
+              {/* Sol: Görsel */}
+              <div className="w-20 h-28 bg-gray-100 rounded-lg relative flex-shrink-0 overflow-hidden border border-gray-200">
+                {product.imageUrl ? (
+                  <Image src={product.imageUrl} fill alt={product.title} className="object-cover" />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                    <FileText size={24} />
+                    <span className="text-[10px] font-bold mt-1">PDF</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Orta: Bilgiler */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-1">
+                   {!product.isApproved && (
+                     <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-bold animate-pulse">
+                       Onay Bekliyor
+                     </span>
+                   )}
+                   <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                     {product.category}
+                   </span>
+                   <span className="text-xs font-bold text-gray-900">
+                     {product.price === 0 ? "Ücretsiz" : `${product.price} ₺`}
+                   </span>
+                </div>
+
+                <h3 className="text-lg font-bold text-gray-900 truncate pr-4">{product.title}</h3>
+                
+                <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-1">
+                    <User size={14} />
+                    <span>{product.seller.shopName || "Bilinmeyen Satıcı"}</span>
+                  </div>
+                  <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                  <div>{new Date(product.createdAt).toLocaleDateString("tr-TR")}</div>
+                  
+                  {/* Dosya İndirme Linki (Admin Kontrolü İçin) */}
+                  <a 
+                    href={product.pdfUrl} 
+                    target="_blank" 
+                    className="flex items-center gap-1 text-indigo-600 hover:underline font-bold ml-2"
                   >
-                    Detay
-                  </Link>
+                    <ExternalLink size={14} /> Dosyayı İncele
+                  </a>
+                </div>
+              </div>
 
-                  {!product.isApproved && (
-                    <>
-                      <button
-                        onClick={() => handleApprove(product.id)}
-                        className="text-green-600 hover:underline"
+              {/* Sağ: Aksiyonlar */}
+              <div className="flex items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
+                {!product.isApproved ? (
+                  <>
+                    <form action={approveProduct}>
+                      <input type="hidden" name="productId" value={product.id} />
+                      <button 
+                        type="submit"
+                        className="flex items-center gap-2 bg-green-600 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-green-700 transition shadow-sm w-full md:w-auto justify-center"
                       >
-                        Onayla
+                        <CheckCircle size={18} /> Onayla
                       </button>
-                      <button
-                        onClick={() => handleReject(product.id)}
-                        className="text-red-600 hover:underline"
+                    </form>
+
+                    <form action={rejectProduct}>
+                      <input type="hidden" name="productId" value={product.id} />
+                      <button 
+                        type="submit"
+                        className="flex items-center gap-2 bg-white text-red-600 border border-red-200 px-5 py-2.5 rounded-lg font-bold hover:bg-red-50 transition w-full md:w-auto justify-center"
                       >
-                        Reddet
+                        <XCircle size={18} /> Reddet
                       </button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+                    </form>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2 text-green-700 bg-green-50 px-4 py-2 rounded-lg font-bold border border-green-100">
+                    <CheckCircle size={18} /> Yayında
+                  </div>
+                )}
+                
+                {/* Onaylı olsa bile silme butonu olsun (Admin yetkisi) */}
+                {product.isApproved && (
+                   <form action={rejectProduct}>
+                      <input type="hidden" name="productId" value={product.id} />
+                      <button 
+                        type="submit"
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                        title="Ürünü Sil"
+                      >
+                        <XCircle size={20} />
+                      </button>
+                   </form>
+                )}
+              </div>
+
+            </div>
+          ))}
+
+          {products.length === 0 && (
+            <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
+               <p className="text-gray-500 font-medium">İncelenecek aktif ürün bulunmuyor.</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

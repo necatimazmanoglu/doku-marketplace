@@ -1,25 +1,12 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
-// Herkese açık sayfalar (Giriş yapmadan görülebilir)
-const isPublicRoute = createRouteMatcher([
-  '/', 
-  '/products(.*)', 
-  '/api/uploadthing(.*)',
-  '/sign-in(.*)', 
-  '/sign-up(.*)'
-])
-
-export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect()
-  }
-})
+export default clerkMiddleware();
 
 export const config = {
   matcher: [
-    // Next.js statik dosyaları hariç her şeyi yakala
+    // Statik dosyalar ve Next.js dahili dosyaları hariç tüm rotaları koru
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // API rotalarını her zaman yakala
+    // API rotalarını her zaman koru
     '/(api|trpc)(.*)',
   ],
-}
+};

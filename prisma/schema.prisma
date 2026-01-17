@@ -7,58 +7,129 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. ÜRÜN MODELİ (Resim alanı eklendi)
+// 1. ÜRÜN MODELİ
 model Product {
   id          String   @id @default(cuid())
   title       String
   description String
-  price       Int
+  price       Float
   category    String?
   tags        String?
-  
-  // YENİ ALAN: Kapak Resmi
-  imageUrl    String?  @default("/placeholder.png")
-  
+  imageUrl    String?
+
+  // Dosya Bilgileri
   pdfUrl      String
   fileName    String
   fileSize    Int
-  
-  isApproved  Boolean  @default(false)
-  isActive    Boolean  @default(true)
-  views       Int      @default(0)
-  
-  sellerId    String
-  createdAt   DateTime @default(now())
 
+  // Durumlar
+  isApproved  Boolean  @default(false) // Admin onayı (Varsayılan: Onaysız)
+  isActive    Boolean  @default(true)  // Satıcı tarafından pasife alma
+  views       Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // İlişkiler
+  sellerId    String
+  seller      SellerProfile @relation(fields: [sellerId], references: [userId])
+  
   orders      Order[]
 }
 
 // 2. SİPARİŞ MODELİ
 model Order {
-  id             String   @id @default(cuid())
-  orderNumber    String
-  productId      String
-  productTitle   String
-  pricePaid      Int
-  status         String
-  buyerId        String
-  buyerEmail     String
-  sellerId       String
-  downloadToken  String
-  downloadExpiry DateTime
-  createdAt      DateTime @default(now())
+  id                 String   @id @default(cuid())
+  orderNumber        String   @default(cuid())
 
-  product        Product  @relation(fields: [productId], references: [id])
+  // Ürün Bilgileri (Snapshot - Ürün silinse bile sipariş kaydı bozulmaz)
+  productId          String
+  productTitle       String
+
+  // --- FİNANSAL KIRILIM ---
+  pricePaid          Float    // Müşterinin ödediği toplam tutar
+  platformFee        Float    @default(0) // Platform Komisyonu
+  paymentProviderFee Float    @default(0) // Ödeme altyapısı kesintisi (iyzico vs.)
+  taxAmount          Float    @default(0) // Vergiler
+  netEarnings        Float    @default(0) // Satıcının cebine giren net para
+
+  status             String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  paymentId          String?  // Ödeme sağlayıcı ID'si
+
+  // Alıcı Bilgileri
+  buyerId            String   // Satın alanın User ID'si
+  buyerEmail         String?
+  userId             String   // (Geriye dönük uyumluluk için)
+
+  // Satıcı Bilgisi
+  sellerId           String   
+
+  // İndirme Tokenları
+  downloadToken      String   @unique @default(uuid())
+  downloadExpiry     DateTime?
+
+  createdAt          DateTime @default(now())
+
+  // İlişki
+  product            Product  @relation(fields: [productId], references: [id])
 }
 
 // 3. SATICI PROFİLİ MODELİ
 model SellerProfile {
   id              String   @id @default(cuid())
-  userId          String   @unique
+  userId          String   @unique // Clerk User ID ile eşleşir
   shopName        String
-  iban            String
+  description     String?
+  logoUrl         String?
+  bannerUrl       String?
+  instagram       String?
+  website         String?
+
+  // Ödeme ve Finans Bilgileri
+  iban            String?
   taxId           String?
-  address         String
+  address         String?
   isTermsAccepted Boolean  @default(false)
+
+  // Bakiye ve Komisyon
+  balance         Float    @default(0) // Çekilebilir Bakiye
+  commissionRate  Float?   // Özel komisyon oranı (Varsa bu, yoksa standart)
+
   createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // İlişkiler
+  products        Product[]
+  payouts         PayoutRequest[]
+}
+
+// 4. PARA ÇEKME TALEPLERİ
+model PayoutRequest {
+  id        String   @id @default(cuid())
+  amount    Float    // İstenen tutar
+  status    String   @default("PENDING") // PENDING, PAID, REJECTED
+  iban      String   // O anki IBAN
+  paidAt    DateTime?
+
+  sellerId  String
+  seller    SellerProfile @relation(fields: [sellerId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// 5. KULLANICI FATURA BİLGİLERİ (Opsiyonel)
+model BillingInfo {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  name           String
+  surname        String
+  identityNumber String?  // TCKN
+  email          String
+  phone          String?
+  city           String?
+  country        String?  @default("Türkiye")
+  address        String?
+  zipCode        String?
+
+  updatedAt      DateTime @updatedAt
 }
